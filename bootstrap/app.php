@@ -22,6 +22,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified.student' => EnsureVerifiedStudent::class,
             'role' => EnsureRole::class,
         ]);
+
+        // Behind a tunnel or hosting proxy (ngrok, Cloudflare...), trust its
+        // forwarded headers so Laravel sees the real https:// address.
+        $middleware->trustProxies(at: '*');
     })
     ->withSchedule(function (Schedule $schedule): void {
         // Every midnight (Philippine time) make sure today has a Daily Word Guess.
