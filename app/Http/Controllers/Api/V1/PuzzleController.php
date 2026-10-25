@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\PuzzleIndexRequest;
 use App\Http\Resources\PuzzleResource;
 use App\Models\Puzzle;
+use App\Services\DailyPuzzleScheduler;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -13,10 +14,21 @@ use Illuminate\Support\Carbon;
 
 class PuzzleController extends Controller
 {
-    /** GET /api/v1/puzzles/daily — today's puzzle (Asia/Manila), same for everyone. */
-    public function daily(Request $request): PuzzleResource|JsonResponse
+    /**
+     * GET /api/v1/puzzles/daily — today's puzzle (Asia/Manila), same for everyone.
+     * If the admin did not schedule one, it is created from the word bank, so
+     * the game never runs empty even without the nightly scheduler.
+     */
+    public function daily(Request $request, DailyPuzzleScheduler $scheduler): PuzzleResource|JsonResponse
     {
-        $puzzle = Puzzle::query()->dailyForToday()->with(['language', 'category'])->first();
+        $puzzle = Puzzle::query()->dailyForToday()->first()
+            ?? $scheduler->ensureFor(Carbon::now(Puzzle::TIMEZONE));
+
+        if ($puzzle) {
+            $puzzle->load(['language', 'category']);
+            // Laravel answers 201 for a model created in this request; this is a GET, so keep 200.
+            $puzzle->wasRecentlyCreated = false;
+        }
 
         if (! $puzzle) {
             return response()->json([

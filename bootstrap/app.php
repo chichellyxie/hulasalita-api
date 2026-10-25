@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\EnsureRole;
 use App\Http\Middleware\EnsureVerifiedStudent;
+use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -21,6 +22,13 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified.student' => EnsureVerifiedStudent::class,
             'role' => EnsureRole::class,
         ]);
+    })
+    ->withSchedule(function (Schedule $schedule): void {
+        // Every midnight (Philippine time) make sure today has a Daily Word Guess.
+        // Runs when "php artisan schedule:work" (local) or the server cron is active.
+        $schedule->command('puzzles:schedule-daily')
+            ->dailyAt('00:01')
+            ->timezone('Asia/Manila');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Every /api/* error is returned as JSON (401, 403, 404, 422, 429 ...),
