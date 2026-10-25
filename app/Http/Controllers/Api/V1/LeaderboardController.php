@@ -37,7 +37,8 @@ class LeaderboardController extends Controller
             ->groupBy('users.id', 'users.username')
             ->selectRaw('users.id as user_id, users.username as username')
             ->selectRaw('SUM(attempts.points) as points')
-            ->selectRaw('SUM(CASE WHEN attempts.solved = 1 THEN 1 ELSE 0 END) as solved')
+            // Named solved_count (not "solved"): the Attempt model casts "solved" to boolean.
+            ->selectRaw('SUM(CASE WHEN attempts.solved = 1 THEN 1 ELSE 0 END) as solved_count')
             ->havingRaw('SUM(attempts.points) > 0')
             ->orderByDesc('points')
             ->orderBy('username')
@@ -57,7 +58,7 @@ class LeaderboardController extends Controller
                 'rank' => $rank,
                 'username' => $row->username,
                 'points' => $points,
-                'solved' => (int) $row->solved,
+                'solved' => (int) $row->solved_count,
                 'is_me' => (int) $row->user_id === $me->id,
             ];
         }

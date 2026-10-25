@@ -28,18 +28,19 @@ class ReportController extends Controller
                 ->when($to, fn ($q) => $q->whereDate('attempts.played_on', '<=', $to));
         };
 
+        // Alias is solved_count (not "solved"): the Attempt model casts "solved" to boolean.
         $solvedSql = 'SUM(CASE WHEN attempts.solved = 1 THEN 1 ELSE 0 END)';
 
         // Overall totals
         $totals = $inRange(Attempt::query())
-            ->selectRaw("COUNT(*) as attempts, {$solvedSql} as solved, COALESCE(SUM(attempts.points), 0) as points, COUNT(DISTINCT attempts.user_id) as players")
+            ->selectRaw("COUNT(*) as attempts, {$solvedSql} as solved_count, COALESCE(SUM(attempts.points), 0) as points, COUNT(DISTINCT attempts.user_id) as players")
             ->first();
 
         // Per school
         $bySchool = $inRange(Attempt::query())
             ->join('users', 'users.id', '=', 'attempts.user_id')
             ->groupBy('users.school_id')
-            ->selectRaw("users.school_id as school_id, COUNT(*) as attempts, {$solvedSql} as solved, COALESCE(SUM(attempts.points), 0) as points, COUNT(DISTINCT attempts.user_id) as players")
+            ->selectRaw("users.school_id as school_id, COUNT(*) as attempts, {$solvedSql} as solved_count, COALESCE(SUM(attempts.points), 0) as points, COUNT(DISTINCT attempts.user_id) as players")
             ->get()
             ->keyBy('school_id');
 
@@ -59,7 +60,7 @@ class ReportController extends Controller
                     'verified_students' => (int) $school->verified_students,
                     'players' => (int) ($row->players ?? 0),
                     'attempts' => (int) ($row->attempts ?? 0),
-                    'solved' => (int) ($row->solved ?? 0),
+                    'solved' => (int) ($row->solved_count ?? 0),
                     'points' => (int) ($row->points ?? 0),
                 ];
             });
@@ -69,7 +70,7 @@ class ReportController extends Controller
             ->join('puzzles', 'puzzles.id', '=', 'attempts.puzzle_id')
             ->join('languages', 'languages.id', '=', 'puzzles.language_id')
             ->groupBy('puzzles.type', 'languages.code')
-            ->selectRaw("puzzles.type as type, languages.code as language, COUNT(*) as attempts, {$solvedSql} as solved")
+            ->selectRaw("puzzles.type as type, languages.code as language, COUNT(*) as attempts, {$solvedSql} as solved_count")
             ->orderBy('puzzles.type')
             ->orderBy('languages.code')
             ->get()
@@ -77,12 +78,12 @@ class ReportController extends Controller
                 'type' => $row->type,
                 'language' => $row->language,
                 'attempts' => (int) $row->attempts,
-                'solved' => (int) $row->solved,
-                'solve_rate' => $row->attempts > 0 ? round($row->solved / $row->attempts * 100, 1) : 0,
+                'solved' => (int) $row->solved_count,
+                'solve_rate' => $row->attempts > 0 ? round($row->solved_count / $row->attempts * 100, 1) : 0,
             ]);
 
         $attempts = (int) ($totals->attempts ?? 0);
-        $solved = (int) ($totals->solved ?? 0);
+        $solved = (int) ($totals->solved_count ?? 0);
 
         return response()->json([
             'data' => [

@@ -38,7 +38,8 @@ class LeaderboardTest extends TestCase
         $pending = User::factory()->create(['school_id' => $school->id, 'username' => 'naghihintay']);
 
         $this->giveWeeklyPoints($me, 20);
-        $this->giveWeeklyPoints($classmate, 50);
+        $this->giveWeeklyPoints($classmate, 30);
+        $this->giveWeeklyPoints($classmate, 20);   // 2 solved puzzles, 50 points
         $this->giveWeeklyPoints($outsider, 99);
         $this->giveWeeklyPoints($pending, 80);
 
@@ -49,6 +50,8 @@ class LeaderboardTest extends TestCase
             ->assertJsonCount(2, 'data')
             ->assertJsonPath('data.0.username', 'kaklase')
             ->assertJsonPath('data.0.rank', 1)
+            ->assertJsonPath('data.0.points', 50)
+            ->assertJsonPath('data.0.solved', 2)
             ->assertJsonPath('data.1.username', 'ako')
             ->assertJsonPath('data.1.is_me', true)
             ->assertJsonPath('meta.me.rank', 2);
