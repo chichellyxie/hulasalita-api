@@ -2,43 +2,59 @@
 
 namespace Database\Factories;
 
+use App\Models\School;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 /**
- * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ * Replaces Laravel's default UserFactory (which uses `name` and
+ * `email_verified_at`, columns HulaSalita does not have).
+ *
+ * @extends Factory<User>
  */
 class UserFactory extends Factory
 {
-    /**
-     * The current password being used by the factory.
-     */
-    protected static ?string $password;
+    protected $model = User::class;
 
-    /**
-     * Define the model's default state.
-     *
-     * @return array<string, mixed>
-     */
+    protected static ?string $password = null;
+
     public function definition(): array
     {
         return [
-            'name' => fake()->name(),
+            'school_id' => School::factory(),
+            'username' => fake()->unique()->regexify('[a-z]{5}[0-9]{3}'),
             'email' => fake()->unique()->safeEmail(),
-            'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
-            'remember_token' => Str::random(10),
+            'role' => User::ROLE_STUDENT,
+            'status' => User::STATUS_PENDING,
+            'is_active' => true,
+            'current_streak' => 0,
+            'last_played_on' => null,
         ];
     }
 
-    /**
-     * Indicate that the model's email address should be unverified.
-     */
-    public function unverified(): static
+    public function approved(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'email_verified_at' => null,
+        return $this->state(fn () => ['status' => User::STATUS_APPROVED]);
+    }
+
+    public function rejected(): static
+    {
+        return $this->state(fn () => ['status' => User::STATUS_REJECTED]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn () => ['is_active' => false]);
+    }
+
+    public function admin(): static
+    {
+        return $this->state(fn () => [
+            'school_id' => null,
+            'role' => User::ROLE_ADMIN,
+            'status' => User::STATUS_APPROVED,
         ]);
     }
 }
