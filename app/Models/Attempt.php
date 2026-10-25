@@ -54,10 +54,10 @@ class Attempt extends Model
     {
         $now = Carbon::now(Puzzle::TIMEZONE);
 
-        return $query->whereBetween('played_on', [
-            $now->copy()->startOfWeek(Carbon::MONDAY)->toDateString(),
-            $now->copy()->endOfWeek(Carbon::SUNDAY)->toDateString(),
-        ]);
+        // whereDate (not whereBetween) so it also works with SQLite in tests.
+        return $query
+            ->whereDate('played_on', '>=', $now->copy()->startOfWeek(Carbon::MONDAY)->toDateString())
+            ->whereDate('played_on', '<=', $now->copy()->endOfWeek(Carbon::SUNDAY)->toDateString());
     }
 
     public function scopeSolved(Builder $query): Builder
